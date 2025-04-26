@@ -1,0 +1,11 @@
+# Rust build files
+backend/target
+
+# Node modules
+frontend/node_modules
+
+# Bun cache
+/frontend/.bun
+
+# VSCode settings
+.vscode

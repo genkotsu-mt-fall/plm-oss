@@ -1,0 +1,39 @@
+# version: '3.9'
+
+services:
+  app:
+    build:
+      context: ./.devcontainer
+      dockerfile: Dockerfile
+    volumes:
+      - type: bind
+        source: ./backend
+        target: /workspace/backend
+      - type: bind
+        source: ./frontend
+        target: /workspace/frontend
+    working_dir: /workspace
+    ports:
+      - "3000:3000"
+      - "5173:5173"
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgres://user:pass@db:5432/plmdb
+    command: sleep infinity
+  db:
+    image: postgres
+    restart: always
+    volumes:
+      - type: tmpfs
+        target: /dev/shm
+        tmpfs:
+          size: 134217728
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=pass
+      - POSTGRES_DB=plmdb
+    ports:
+      - "5432:5432"
+
+# volumes:
