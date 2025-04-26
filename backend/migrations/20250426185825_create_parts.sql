@@ -1,0 +1,9 @@
+CREATE TABLE parts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    part_number TEXT NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    kind TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+)
