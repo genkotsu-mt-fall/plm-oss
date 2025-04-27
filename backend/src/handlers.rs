@@ -1,3 +1,5 @@
+use axum::extract::Path;
+use axum::http::StatusCode;
 use axum::{Json, extract::State};
 use serde::Deserialize;
 use serde::Serialize;
@@ -49,4 +51,16 @@ pub async fn create_part(
     parts_lock.push(part.clone());
 
     Json(part)
+}
+
+pub async fn get_part(
+    State(parts): State<PartState>,
+    Path(id): Path<String>,
+) -> Result<Json<Part>, StatusCode> {
+    let parts_lock = parts.lock().await;
+    if let Some(part) = parts_lock.iter().find(|p| p.id == id) {
+        Ok(Json(part.clone()))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
 }

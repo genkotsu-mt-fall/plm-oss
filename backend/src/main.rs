@@ -3,6 +3,7 @@ mod handlers;
 use axum::Router;
 use axum::routing::get;
 use handlers::create_part;
+use handlers::get_part;
 use handlers::get_parts;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -19,6 +20,7 @@ async fn main() {
     let app = Router::new()
         .route("/healthz", get(health_check))
         .route("/parts", get(get_parts).post(create_part))
+        .route("/parts/{id}", get(get_part))
         .with_state(shared_part);
     let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Server running at http://localhost:3000");
