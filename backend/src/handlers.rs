@@ -1,7 +1,11 @@
-use axum::Json;
+use axum::{Json, extract::State};
+use serde::Deserialize;
 use serde::Serialize;
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use uuid::Uuid;
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct Part {
     id: String,
     part_number: String,
@@ -10,14 +14,39 @@ pub struct Part {
     kind: String,
 }
 
-pub async fn get_parts() -> Json<Vec<Part>> {
-    let parts = vec![Part {
-        id: "00000000-0000-0000-0000-000000000001".to_string(),
-        part_number: "ABC-123".to_string(),
-        name: "ねじ".to_string(),
-        description: "ステンレス製のねじ".to_string(),
-        kind: "部品".to_string(),
-    }];
+pub async fn get_parts(State(parts): State<PartState>) -> Json<Vec<Part>> {
+    let parts_lock = parts.lock().await;
+    Json(parts_lock.clone())
+}
 
-    Json(parts)
+pub type PartState = Arc<Mutex<Vec<Part>>>;
+
+#[derive(Deserialize)]
+pub struct NewPart {
+    part_number: String,
+    name: String,
+    description: String,
+    kind: String,
+}
+
+fn generate_uuid() -> String {
+    Uuid::new_v4().to_string()
+}
+
+pub async fn create_part(
+    State(parts): State<PartState>,
+    Json(new_part): Json<NewPart>,
+) -> Json<Part> {
+    let part = Part {
+        id: generate_uuid(),
+        part_number: new_part.part_number,
+        name: new_part.name,
+        description: new_part.description,
+        kind: new_part.kind,
+    };
+
+    let mut parts_lock = parts.lock().await;
+    parts_lock.push(part.clone());
+
+    Json(part)
 }
