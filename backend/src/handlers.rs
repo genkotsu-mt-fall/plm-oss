@@ -1,8 +1,5 @@
-use axum::extract::Path;
-use axum::http::StatusCode;
-use axum::{Json, extract::State};
-use serde::Deserialize;
-use serde::Serialize;
+use axum::{Json, extract::Path, extract::State, http::StatusCode};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -59,6 +56,24 @@ pub async fn get_part(
 ) -> Result<Json<Part>, StatusCode> {
     let parts_lock = parts.lock().await;
     if let Some(part) = parts_lock.iter().find(|p| p.id == id) {
+        Ok(Json(part.clone()))
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
+
+pub async fn update_part(
+    State(parts): State<PartState>,
+    Path(id): Path<String>,
+    Json(updated_part): Json<NewPart>,
+) -> Result<Json<Part>, StatusCode> {
+    let mut parts_lock = parts.lock().await;
+    if let Some(part) = parts_lock.iter_mut().find(|p| p.id == id) {
+        part.part_number = updated_part.part_number;
+        part.name = updated_part.name;
+        part.description = updated_part.description;
+        part.kind = updated_part.kind;
+
         Ok(Json(part.clone()))
     } else {
         Err(StatusCode::NOT_FOUND)
