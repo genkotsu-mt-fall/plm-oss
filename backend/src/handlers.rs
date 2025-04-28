@@ -103,12 +103,16 @@ pub async fn get_part(
     }
 }
 
-// #[axum::debug_handler]
+#[axum::debug_handler]
 pub async fn update_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
     Json(updated_part): Json<NewPart>,
-) -> Result<Json<Part>, StatusCode> {
+) -> Result<Json<Part>, (StatusCode, String)> {
+    updated_part
+        .validate()
+        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Validation Error: {}", e)))?;
+
     let part = sqlx::query_as!(
         Part,
         r#"UPDATE parts
@@ -128,11 +132,16 @@ pub async fn update_part(
     )
     .fetch_optional(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to UPDATE".to_string(),
+        )
+    })?;
 
     match part {
         Some(part) => Ok(Json(part)),
-        None => Err(StatusCode::NOT_FOUND),
+        None => Err((StatusCode::NOT_FOUND, "Part Not Found".to_string())),
     }
 }
 
