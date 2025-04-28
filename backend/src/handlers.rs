@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
+use validator::Validate;
 
 #[derive(sqlx::FromRow, Serialize)]
 pub struct Part {
@@ -15,9 +16,11 @@ pub struct Part {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 pub struct NewPart {
+    #[validate(length(min = 1, message = "part_number must not be empty"))]
     pub part_number: String,
+    #[validate(length(min = 1, message = "name must not be empty"))]
     pub name: String,
     pub description: Option<String>,
     pub kind: Option<String>,
@@ -28,6 +31,10 @@ pub async fn create_part(
     State(pool): State<PgPool>,
     Json(new_part): Json<NewPart>,
 ) -> Result<Json<Part>, (StatusCode, String)> {
+    new_part
+        .validate()
+        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Validation Error: {}", e)))?;
+
     let part = sqlx::query_as!(
         Part,
         r#"INSERT INTO parts (id, part_number, name, description, kind)
