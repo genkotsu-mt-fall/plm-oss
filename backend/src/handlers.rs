@@ -79,3 +79,16 @@ pub async fn update_part(
         Err(StatusCode::NOT_FOUND)
     }
 }
+
+pub async fn delete_part(
+    State(parts): State<PartState>,
+    Path(id): Path<String>,
+) -> Result<StatusCode, StatusCode> {
+    let mut parts_lock = parts.lock().await;
+    if let Some(pos) = parts_lock.iter().position(|p| p.id == id) {
+        parts_lock.remove(pos);
+        Ok(StatusCode::NO_CONTENT)
+    } else {
+        Err(StatusCode::NOT_FOUND)
+    }
+}
