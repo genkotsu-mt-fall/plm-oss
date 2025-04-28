@@ -1,12 +1,7 @@
-// use axum::response::IntoResponse;
 use axum::{Json, extract::Path, extract::State, http::StatusCode};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-// use sqlx::{PgPool, postgres::PgPoolOptions};
-// use sqlx::{PgPool, pool};
 use sqlx::PgPool;
-// use std::sync::Arc;
-// use tokio::sync::Mutex;
 use uuid::Uuid;
 
 #[derive(sqlx::FromRow, Serialize)]
@@ -30,21 +25,9 @@ pub struct NewPart {
 
 // #[axum::debug_handler]
 pub async fn create_part(
-    // State(parts): State<PartState>,
-    // State(pool): State<Arc<PgPool>>,
     State(pool): State<PgPool>,
     Json(new_part): Json<NewPart>,
 ) -> Result<Json<Part>, (StatusCode, String)> {
-    // let part = Part {
-    //     id: generate_uuid(),
-    //     part_number: new_part.part_number,
-    //     name: new_part.name,
-    //     description: new_part.description,
-    //     kind: new_part.kind,
-    // };
-
-    // let mut parts_lock = parts.lock().await;
-    // parts_lock.push(part.clone());
     let part = sqlx::query_as!(
         Part,
         r#"INSERT INTO parts (id, part_number, name, description, kind)
@@ -56,7 +39,6 @@ pub async fn create_part(
         new_part.description,
         new_part.kind
     )
-    // .fetch_one(pool.as_ref())
     .fetch_one(&pool)
     .await
     .map_err(|e| {
@@ -71,11 +53,8 @@ pub async fn create_part(
 
 // #[axum::debug_handler]
 pub async fn get_parts(
-    // State(parts): State<PartState>
     State(pool): State<PgPool>,
 ) -> Result<Json<Vec<Part>>, (StatusCode, String)> {
-    // let parts_lock = parts.lock().await;
-    // Json(parts_lock.clone())
     let parts = sqlx::query_as!(
         Part,
         r#"SELECT id, part_number, name, description, kind, created_at, updated_at
@@ -94,24 +73,11 @@ pub async fn get_parts(
     Ok(Json(parts))
 }
 
-// pub type PartState = Arc<Mutex<Vec<Part>>>;
-
-// fn generate_uuid() -> String {
-//     Uuid::new_v4().to_string()
-// }
-
 // #[axum::debug_handler]
 pub async fn get_part(
-    // State(parts): State<PartState>,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<Part>, StatusCode> {
-    // let parts_lock = parts.lock().await;
-    // if let Some(part) = parts_lock.iter().find(|p| p.id == id) {
-    //     Ok(Json(part.clone()))
-    // } else {
-    //     Err(StatusCode::NOT_FOUND)
-    // }
     let part = sqlx::query_as!(
         Part,
         r#"SELECT id, part_number, name, description, kind, created_at, updated_at
@@ -132,22 +98,10 @@ pub async fn get_part(
 
 // #[axum::debug_handler]
 pub async fn update_part(
-    // State(parts): State<PartState>,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
     Json(updated_part): Json<NewPart>,
 ) -> Result<Json<Part>, StatusCode> {
-    // let mut parts_lock = parts.lock().await;
-    // if let Some(part) = parts_lock.iter_mut().find(|p| p.id == id) {
-    //     part.part_number = updated_part.part_number;
-    //     part.name = updated_part.name;
-    //     part.description = updated_part.description;
-    //     part.kind = updated_part.kind;
-
-    //     Ok(Json(part.clone()))
-    // } else {
-    //     Err(StatusCode::NOT_FOUND)
-    // }
     let part = sqlx::query_as!(
         Part,
         r#"UPDATE parts
@@ -175,15 +129,19 @@ pub async fn update_part(
     }
 }
 
-// pub async fn delete_part(
-//     State(parts): State<PartState>,
-//     Path(id): Path<String>,
-// ) -> Result<StatusCode, StatusCode> {
-//     let mut parts_lock = parts.lock().await;
-//     if let Some(pos) = parts_lock.iter().position(|p| p.id == id) {
-//         parts_lock.remove(pos);
-//         Ok(StatusCode::NO_CONTENT)
-//     } else {
-//         Err(StatusCode::NOT_FOUND)
-//     }
-// }
+// #[axum::debug_handler]
+pub async fn delete_part(
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<StatusCode, StatusCode> {
+    let result = sqlx::query!(r#"DELETE FROM parts WHERE id = $1"#, id)
+        .execute(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if result.rows_affected() == 0 {
+        Err(StatusCode::NOT_FOUND)
+    } else {
+        Ok(StatusCode::NO_CONTENT)
+    }
+}
