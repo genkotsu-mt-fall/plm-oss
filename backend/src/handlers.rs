@@ -1,9 +1,9 @@
 // use axum::response::IntoResponse;
-// use axum::{Json, extract::Path, extract::State, http::StatusCode};
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{Json, extract::Path, extract::State, http::StatusCode};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 // use sqlx::{PgPool, postgres::PgPoolOptions};
+// use sqlx::{PgPool, pool};
 use sqlx::PgPool;
 // use std::sync::Arc;
 // use tokio::sync::Mutex;
@@ -100,17 +100,35 @@ pub async fn get_parts(
 //     Uuid::new_v4().to_string()
 // }
 
-// pub async fn get_part(
-//     State(parts): State<PartState>,
-//     Path(id): Path<String>,
-// ) -> Result<Json<Part>, StatusCode> {
-//     let parts_lock = parts.lock().await;
-//     if let Some(part) = parts_lock.iter().find(|p| p.id == id) {
-//         Ok(Json(part.clone()))
-//     } else {
-//         Err(StatusCode::NOT_FOUND)
-//     }
-// }
+// #[axum::debug_handler]
+pub async fn get_part(
+    // State(parts): State<PartState>,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+) -> Result<Json<Part>, StatusCode> {
+    // let parts_lock = parts.lock().await;
+    // if let Some(part) = parts_lock.iter().find(|p| p.id == id) {
+    //     Ok(Json(part.clone()))
+    // } else {
+    //     Err(StatusCode::NOT_FOUND)
+    // }
+    let part = sqlx::query_as!(
+        Part,
+        r#"SELECT id, part_number, name, description, kind, created_at, updated_at
+        FROM parts
+        WHERE id = $1
+        "#,
+        id
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    match part {
+        Some(part) => Ok(Json(part)),
+        None => Err(StatusCode::NOT_FOUND),
+    }
+}
 
 // pub async fn update_part(
 //     State(parts): State<PartState>,
