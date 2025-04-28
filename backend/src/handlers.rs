@@ -1,94 +1,147 @@
 use axum::{Json, extract::Path, extract::State, http::StatusCode};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use sqlx::PgPool;
 use uuid::Uuid;
 
-#[derive(Serialize, Clone)]
+#[derive(sqlx::FromRow, Serialize)]
 pub struct Part {
-    id: String,
-    part_number: String,
-    name: String,
-    description: String,
-    kind: String,
+    pub id: Uuid,
+    pub part_number: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub kind: Option<String>,
+    pub created_at: Option<DateTime<Utc>>,
+    pub updated_at: Option<DateTime<Utc>>,
 }
-
-pub async fn get_parts(State(parts): State<PartState>) -> Json<Vec<Part>> {
-    let parts_lock = parts.lock().await;
-    Json(parts_lock.clone())
-}
-
-pub type PartState = Arc<Mutex<Vec<Part>>>;
 
 #[derive(Deserialize)]
 pub struct NewPart {
-    part_number: String,
-    name: String,
-    description: String,
-    kind: String,
+    pub part_number: String,
+    pub name: String,
+    pub description: Option<String>,
+    pub kind: Option<String>,
 }
 
-fn generate_uuid() -> String {
-    Uuid::new_v4().to_string()
-}
-
+// #[axum::debug_handler]
 pub async fn create_part(
-    State(parts): State<PartState>,
+    State(pool): State<PgPool>,
     Json(new_part): Json<NewPart>,
-) -> Json<Part> {
-    let part = Part {
-        id: generate_uuid(),
-        part_number: new_part.part_number,
-        name: new_part.name,
-        description: new_part.description,
-        kind: new_part.kind,
-    };
+) -> Result<Json<Part>, (StatusCode, String)> {
+    let part = sqlx::query_as!(
+        Part,
+        r#"INSERT INTO parts (id, part_number, name, description, kind)
+           VALUES ($1, $2, $3, $4, $5)
+           RETURNING id, part_number, name, description, kind, created_at, updated_at"#,
+        Uuid::new_v4(),
+        new_part.part_number,
+        new_part.name,
+        new_part.description,
+        new_part.kind
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("DB INSERT失敗: {}", e),
+        )
+    })?;
 
-    let mut parts_lock = parts.lock().await;
-    parts_lock.push(part.clone());
-
-    Json(part)
+    Ok(Json(part))
 }
 
+// #[axum::debug_handler]
+pub async fn get_parts(
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<Part>>, (StatusCode, String)> {
+    let parts = sqlx::query_as!(
+        Part,
+        r#"SELECT id, part_number, name, description, kind, created_at, updated_at
+        FROM parts
+        "#
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("DB SELECT失敗: {}", e),
+        )
+    })?;
+
+    Ok(Json(parts))
+}
+
+// #[axum::debug_handler]
 pub async fn get_part(
-    State(parts): State<PartState>,
-    Path(id): Path<String>,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
 ) -> Result<Json<Part>, StatusCode> {
-    let parts_lock = parts.lock().await;
-    if let Some(part) = parts_lock.iter().find(|p| p.id == id) {
-        Ok(Json(part.clone()))
-    } else {
-        Err(StatusCode::NOT_FOUND)
+    let part = sqlx::query_as!(
+        Part,
+        r#"SELECT id, part_number, name, description, kind, created_at, updated_at
+        FROM parts
+        WHERE id = $1
+        "#,
+        id
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    match part {
+        Some(part) => Ok(Json(part)),
+        None => Err(StatusCode::NOT_FOUND),
     }
 }
 
+// #[axum::debug_handler]
 pub async fn update_part(
-    State(parts): State<PartState>,
-    Path(id): Path<String>,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
     Json(updated_part): Json<NewPart>,
 ) -> Result<Json<Part>, StatusCode> {
-    let mut parts_lock = parts.lock().await;
-    if let Some(part) = parts_lock.iter_mut().find(|p| p.id == id) {
-        part.part_number = updated_part.part_number;
-        part.name = updated_part.name;
-        part.description = updated_part.description;
-        part.kind = updated_part.kind;
+    let part = sqlx::query_as!(
+        Part,
+        r#"UPDATE parts
+        SET part_number = $1,
+            name = $2,
+            description = $3,
+            kind = $4,
+            updated_at = NOW()
+        WHERE id = $5
+        RETURNING id, part_number, name, description, kind, created_at, updated_at
+        "#,
+        updated_part.part_number,
+        updated_part.name,
+        updated_part.description,
+        updated_part.kind,
+        id
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-        Ok(Json(part.clone()))
-    } else {
-        Err(StatusCode::NOT_FOUND)
+    match part {
+        Some(part) => Ok(Json(part)),
+        None => Err(StatusCode::NOT_FOUND),
     }
 }
 
+// #[axum::debug_handler]
 pub async fn delete_part(
-    State(parts): State<PartState>,
-    Path(id): Path<String>,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut parts_lock = parts.lock().await;
-    if let Some(pos) = parts_lock.iter().position(|p| p.id == id) {
-        parts_lock.remove(pos);
-        Ok(StatusCode::NO_CONTENT)
-    } else {
+    let result = sqlx::query!(r#"DELETE FROM parts WHERE id = $1"#, id)
+        .execute(&pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if result.rows_affected() == 0 {
         Err(StatusCode::NOT_FOUND)
+    } else {
+        Ok(StatusCode::NO_CONTENT)
     }
 }
