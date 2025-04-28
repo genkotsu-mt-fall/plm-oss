@@ -130,23 +130,50 @@ pub async fn get_part(
     }
 }
 
-// pub async fn update_part(
-//     State(parts): State<PartState>,
-//     Path(id): Path<String>,
-//     Json(updated_part): Json<NewPart>,
-// ) -> Result<Json<Part>, StatusCode> {
-//     let mut parts_lock = parts.lock().await;
-//     if let Some(part) = parts_lock.iter_mut().find(|p| p.id == id) {
-//         part.part_number = updated_part.part_number;
-//         part.name = updated_part.name;
-//         part.description = updated_part.description;
-//         part.kind = updated_part.kind;
+// #[axum::debug_handler]
+pub async fn update_part(
+    // State(parts): State<PartState>,
+    State(pool): State<PgPool>,
+    Path(id): Path<Uuid>,
+    Json(updated_part): Json<NewPart>,
+) -> Result<Json<Part>, StatusCode> {
+    // let mut parts_lock = parts.lock().await;
+    // if let Some(part) = parts_lock.iter_mut().find(|p| p.id == id) {
+    //     part.part_number = updated_part.part_number;
+    //     part.name = updated_part.name;
+    //     part.description = updated_part.description;
+    //     part.kind = updated_part.kind;
 
-//         Ok(Json(part.clone()))
-//     } else {
-//         Err(StatusCode::NOT_FOUND)
-//     }
-// }
+    //     Ok(Json(part.clone()))
+    // } else {
+    //     Err(StatusCode::NOT_FOUND)
+    // }
+    let part = sqlx::query_as!(
+        Part,
+        r#"UPDATE parts
+        SET part_number = $1,
+            name = $2,
+            description = $3,
+            kind = $4,
+            updated_at = NOW()
+        WHERE id = $5
+        RETURNING id, part_number, name, description, kind, created_at, updated_at
+        "#,
+        updated_part.part_number,
+        updated_part.name,
+        updated_part.description,
+        updated_part.kind,
+        id
+    )
+    .fetch_optional(&pool)
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    match part {
+        Some(part) => Ok(Json(part)),
+        None => Err(StatusCode::NOT_FOUND),
+    }
+}
 
 // pub async fn delete_part(
 //     State(parts): State<PartState>,
