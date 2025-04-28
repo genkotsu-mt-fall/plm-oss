@@ -3,7 +3,39 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
-use validator::Validate;
+use validator::{Validate, ValidationErrors};
+
+#[derive(Serialize)]
+pub struct ValidationErrorResponse {
+    pub errors: Vec<FieldError>,
+}
+
+#[derive(Serialize)]
+pub struct FieldError {
+    pub field: String,
+    pub message: String,
+}
+
+fn extract_validation_errors(errors: ValidationErrors) -> ValidationErrorResponse {
+    let mut field_errors = Vec::new();
+
+    for (field, errors) in errors.field_errors() {
+        for error in errors {
+            let message = error
+                .message
+                .clone()
+                .unwrap_or_else(|| std::borrow::Cow::from("Invalid input"));
+
+            field_errors.push(FieldError {
+                field: field.to_string(),
+                message: message.to_string(),
+            });
+        }
+    }
+    ValidationErrorResponse {
+        errors: field_errors,
+    }
+}
 
 #[derive(sqlx::FromRow, Serialize)]
 pub struct Part {
@@ -31,9 +63,13 @@ pub async fn create_part(
     State(pool): State<PgPool>,
     Json(new_part): Json<NewPart>,
 ) -> Result<Json<Part>, (StatusCode, String)> {
-    new_part
-        .validate()
-        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Validation Error: {}", e)))?;
+    new_part.validate().map_err(|e| {
+        let errors = extract_validation_errors(e);
+        (
+            StatusCode::BAD_REQUEST,
+            serde_json::to_string(&errors).unwrap(),
+        )
+    })?;
 
     let part = sqlx::query_as!(
         Part,
@@ -109,9 +145,13 @@ pub async fn update_part(
     Path(id): Path<Uuid>,
     Json(updated_part): Json<NewPart>,
 ) -> Result<Json<Part>, (StatusCode, String)> {
-    updated_part
-        .validate()
-        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Validation Error: {}", e)))?;
+    updated_part.validate().map_err(|e| {
+        let errors = extract_validation_errors(e);
+        (
+            StatusCode::BAD_REQUEST,
+            serde_json::to_string(&errors).unwrap(),
+        )
+    })?;
 
     let part = sqlx::query_as!(
         Part,
