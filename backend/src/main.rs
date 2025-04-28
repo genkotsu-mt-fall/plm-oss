@@ -1,8 +1,9 @@
-// mod handlers;
+mod handlers;
 
-use axum::{Router, routing::get};
+use axum::{Router, routing::get, routing::post};
 use dotenvy::dotenv;
 // use handlers::{create_part, delete_part, get_part, get_parts, update_part};
+use handlers::create_part;
 use sqlx::postgres::PgPoolOptions;
 // use std::{env, sync::Arc};
 use std::env;
@@ -39,7 +40,9 @@ async fn main() {
         //     "/parts/{id}",
         //     get(get_part).put(update_part).delete(delete_part),
         // )
+        .route("/parts", post(create_part))
         .with_state(pool);
+    // .with_state(Arc::new(pool));
 
     let listener = TcpListener::bind("0.0.0.0:3000").await.unwrap();
     println!("Server running at http://localhost:3000");
