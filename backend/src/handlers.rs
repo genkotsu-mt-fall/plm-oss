@@ -69,10 +69,30 @@ pub async fn create_part(
     Ok(Json(part))
 }
 
-// pub async fn get_parts(State(parts): State<PartState>) -> Json<Vec<Part>> {
-//     let parts_lock = parts.lock().await;
-//     Json(parts_lock.clone())
-// }
+// #[axum::debug_handler]
+pub async fn get_parts(
+    // State(parts): State<PartState>
+    State(pool): State<PgPool>,
+) -> Result<Json<Vec<Part>>, (StatusCode, String)> {
+    // let parts_lock = parts.lock().await;
+    // Json(parts_lock.clone())
+    let parts = sqlx::query_as!(
+        Part,
+        r#"SELECT id, part_number, name, description, kind, created_at, updated_at
+        FROM parts
+        "#
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            format!("DB SELECT失敗: {}", e),
+        )
+    })?;
+
+    Ok(Json(parts))
+}
 
 // pub type PartState = Arc<Mutex<Vec<Part>>>;
 

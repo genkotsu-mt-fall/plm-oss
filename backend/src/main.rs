@@ -1,9 +1,9 @@
 mod handlers;
 
-use axum::{Router, routing::get, routing::post};
+use axum::{Router, routing::get};
 use dotenvy::dotenv;
 // use handlers::{create_part, delete_part, get_part, get_parts, update_part};
-use handlers::create_part;
+use handlers::{create_part, get_parts};
 use sqlx::postgres::PgPoolOptions;
 // use std::{env, sync::Arc};
 use std::env;
@@ -40,7 +40,7 @@ async fn main() {
         //     "/parts/{id}",
         //     get(get_part).put(update_part).delete(delete_part),
         // )
-        .route("/parts", post(create_part))
+        .route("/parts", get(get_parts).post(create_part))
         .with_state(pool);
     // .with_state(Arc::new(pool));
 
