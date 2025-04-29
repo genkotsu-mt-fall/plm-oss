@@ -1,8 +1,11 @@
-mod handlers;
+mod errors;
+mod models;
+mod responses;
+mod routes;
 
 use axum::{Router, routing::get};
 use dotenvy::dotenv;
-use handlers::{create_part, delete_part, get_part, get_parts, update_part};
+use routes::parts::{create_part, delete_part, get_part, get_parts, update_part};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use tokio::net::TcpListener;
