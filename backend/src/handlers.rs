@@ -2,15 +2,16 @@ use axum::{Json, extract::Path, extract::State, http::StatusCode};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
+use tracing::{error, info};
 use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct ValidationErrorResponse {
     pub errors: Vec<FieldError>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct FieldError {
     pub field: String,
     pub message: String,
@@ -65,6 +66,7 @@ pub async fn create_part(
 ) -> Result<Json<Part>, (StatusCode, String)> {
     new_part.validate().map_err(|e| {
         let errors = extract_validation_errors(e);
+        error!("Validation failed during create_part: {:?}", errors);
         (
             StatusCode::BAD_REQUEST,
             serde_json::to_string(&errors).unwrap(),
@@ -85,12 +87,14 @@ pub async fn create_part(
     .fetch_one(&pool)
     .await
     .map_err(|e| {
+        error!("Failed to insert part: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("DB INSERT失敗: {}", e),
+            format!("DB insert failed: {}", e),
         )
     })?;
 
+    info!("New part created successfully: {}", part.id);
     Ok(Json(part))
 }
 
@@ -107,12 +111,14 @@ pub async fn get_parts(
     .fetch_all(&pool)
     .await
     .map_err(|e| {
+        error!("Failed to fetch parts: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            format!("DB SELECT失敗: {}", e),
+            format!("DB select failed: {}", e),
         )
     })?;
 
+    info!("Fetched {} parts from database", parts.len());
     Ok(Json(parts))
 }
 
@@ -131,11 +137,20 @@ pub async fn get_part(
     )
     .fetch_optional(&pool)
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|e| {
+        error!("Failed to fetch part: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
 
     match part {
-        Some(part) => Ok(Json(part)),
-        None => Err(StatusCode::NOT_FOUND),
+        Some(part) => {
+            info!("Part found: {}", part.id);
+            Ok(Json(part))
+        }
+        None => {
+            info!("Part not found: {}", id);
+            Err(StatusCode::NOT_FOUND)
+        }
     }
 }
 
@@ -147,6 +162,7 @@ pub async fn update_part(
 ) -> Result<Json<Part>, (StatusCode, String)> {
     updated_part.validate().map_err(|e| {
         let errors = extract_validation_errors(e);
+        error!("Validation failed during update_part: {:?}", errors);
         (
             StatusCode::BAD_REQUEST,
             serde_json::to_string(&errors).unwrap(),
@@ -172,16 +188,23 @@ pub async fn update_part(
     )
     .fetch_optional(&pool)
     .await
-    .map_err(|_| {
+    .map_err(|e| {
+        error!("Failed to update part: {}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to UPDATE".to_string(),
+            "Failed to update part".to_string(),
         )
     })?;
 
     match part {
-        Some(part) => Ok(Json(part)),
-        None => Err((StatusCode::NOT_FOUND, "Part Not Found".to_string())),
+        Some(part) => {
+            info!("Part updated successfully: {}", part.id);
+            Ok(Json(part))
+        }
+        None => {
+            info!("Part not found for update: {}", id);
+            Err((StatusCode::NOT_FOUND, "Part Not Found".to_string()))
+        }
     }
 }
 
@@ -193,11 +216,16 @@ pub async fn delete_part(
     let result = sqlx::query!(r#"DELETE FROM parts WHERE id = $1"#, id)
         .execute(&pool)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|e| {
+            error!("Failed to delete part: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
 
     if result.rows_affected() == 0 {
+        info!("Part not found for deletion: {}", id);
         Err(StatusCode::NOT_FOUND)
     } else {
+        info!("Part deleted successfully: {}", id);
         Ok(StatusCode::NO_CONTENT)
     }
 }
