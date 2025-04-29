@@ -108,6 +108,12 @@ fn extract_validation_errors(errors: ValidationErrors) -> ValidationErrorRespons
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct SuccessResponse<T> {
+    pub code: u16,
+    pub data: T,
+}
+
 #[derive(sqlx::FromRow, Serialize)]
 pub struct Part {
     pub id: Uuid,
@@ -133,7 +139,7 @@ pub struct NewPart {
 pub async fn create_part(
     State(pool): State<PgPool>,
     Json(new_part): Json<NewPart>,
-) -> Result<Json<Part>, AppError> {
+) -> Result<Json<SuccessResponse<Part>>, AppError> {
     new_part
         .validate()
         .map_err(|e| AppError::ValidationError(extract_validation_errors(e)))?;
@@ -157,11 +163,16 @@ pub async fn create_part(
     })?;
 
     info!("Part created successfully: {}", part.id);
-    Ok(Json(part))
+    Ok(Json(SuccessResponse {
+        code: StatusCode::CREATED.as_u16(),
+        data: part,
+    }))
 }
 
 // #[axum::debug_handler]
-pub async fn get_parts(State(pool): State<PgPool>) -> Result<Json<Vec<Part>>, AppError> {
+pub async fn get_parts(
+    State(pool): State<PgPool>,
+) -> Result<Json<SuccessResponse<Vec<Part>>>, AppError> {
     let parts = sqlx::query_as!(
         Part,
         r#"SELECT id, part_number, name, description, kind, created_at, updated_at
@@ -176,14 +187,17 @@ pub async fn get_parts(State(pool): State<PgPool>) -> Result<Json<Vec<Part>>, Ap
     })?;
 
     info!("Fetched {} parts successfully", parts.len());
-    Ok(Json(parts))
+    Ok(Json(SuccessResponse {
+        code: StatusCode::OK.as_u16(),
+        data: parts,
+    }))
 }
 
 // #[axum::debug_handler]
 pub async fn get_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
-) -> Result<Json<Part>, AppError> {
+) -> Result<Json<SuccessResponse<Part>>, AppError> {
     let part = sqlx::query_as!(
         Part,
         r#"SELECT id, part_number, name, description, kind, created_at, updated_at
@@ -202,7 +216,10 @@ pub async fn get_part(
     match part {
         Some(part) => {
             info!("Part found: {}", part.id);
-            Ok(Json(part))
+            Ok(Json(SuccessResponse {
+                code: StatusCode::OK.as_u16(),
+                data: part,
+            }))
         }
         None => {
             info!("Part not found: {}", id);
@@ -216,7 +233,7 @@ pub async fn update_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
     Json(updated_part): Json<NewPart>,
-) -> Result<Json<Part>, AppError> {
+) -> Result<Json<SuccessResponse<Part>>, AppError> {
     updated_part
         .validate()
         .map_err(|e| AppError::ValidationError(extract_validation_errors(e)))?;
@@ -248,7 +265,10 @@ pub async fn update_part(
     match part {
         Some(part) => {
             info!("Part updated successfully: {}", part.id);
-            Ok(Json(part))
+            Ok(Json(SuccessResponse {
+                code: StatusCode::OK.as_u16(),
+                data: part,
+            }))
         }
         None => {
             info!("Part not found for update: {}", id);
@@ -264,7 +284,7 @@ pub async fn update_part(
 pub async fn delete_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
-) -> Result<StatusCode, AppError> {
+) -> Result<Json<SuccessResponse<()>>, AppError> {
     let result = sqlx::query!(r#"DELETE FROM parts WHERE id = $1"#, id)
         .execute(&pool)
         .await
@@ -281,6 +301,9 @@ pub async fn delete_part(
         )))
     } else {
         info!("Part deleted successfully: {}", id);
-        Ok(StatusCode::NO_CONTENT)
+        Ok(Json(SuccessResponse {
+            code: StatusCode::NO_CONTENT.as_u16(),
+            data: (),
+        }))
     }
 }
