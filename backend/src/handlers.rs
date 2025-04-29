@@ -20,7 +20,7 @@ pub struct ErrorDetail {
 
 #[derive(Debug)]
 pub enum AppError {
-    ValidationError(String),
+    ValidationError(ValidationErrorResponse),
     NotFound(String),
     DatabaseError(String),
     // InternalError(String),
@@ -28,23 +28,51 @@ pub enum AppError {
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
-        let (status, message) = match self {
-            AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
-            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
-            AppError::DatabaseError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
-            // AppError::InternalError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+        let response: Response = match self {
+            AppError::ValidationError(errors) => {
+                let status = StatusCode::BAD_REQUEST;
+
+                error!(
+                    "Validation error ({}): {} error(s) - {:?}",
+                    status,
+                    errors.errors.len(),
+                    errors
+                );
+
+                let body = Json(errors);
+
+                (status, body).into_response()
+            }
+            AppError::NotFound(message) => {
+                let status = StatusCode::NOT_FOUND;
+
+                error!("NotFound error ({}): {}", status, message);
+
+                let body = Json(ErrorResponse {
+                    error: ErrorDetail {
+                        code: status.as_u16(),
+                        message,
+                    },
+                });
+
+                (status, body).into_response()
+            }
+            AppError::DatabaseError(message) => {
+                let status = StatusCode::INTERNAL_SERVER_ERROR;
+
+                error!("Database error ({}): {}", status, message);
+
+                let body = Json(ErrorResponse {
+                    error: ErrorDetail {
+                        code: status.as_u16(),
+                        message,
+                    },
+                });
+
+                (status, body).into_response()
+            } // AppError::InternalError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
         };
-
-        error!("Error occurred: {} - {}", status, message);
-
-        let body = Json(ErrorResponse {
-            error: ErrorDetail {
-                code: status.as_u16(),
-                message,
-            },
-        });
-
-        (status, body).into_response()
+        response
     }
 }
 
@@ -106,11 +134,9 @@ pub async fn create_part(
     State(pool): State<PgPool>,
     Json(new_part): Json<NewPart>,
 ) -> Result<Json<Part>, AppError> {
-    new_part.validate().map_err(|e| {
-        let errors = extract_validation_errors(e);
-        error!("Validation failed during create_part: {:?}", errors);
-        AppError::ValidationError(serde_json::to_string(&errors).unwrap())
-    })?;
+    new_part
+        .validate()
+        .map_err(|e| AppError::ValidationError(extract_validation_errors(e)))?;
 
     let part = sqlx::query_as!(
         Part,
@@ -126,11 +152,11 @@ pub async fn create_part(
     .fetch_one(&pool)
     .await
     .map_err(|e| {
-        error!("Failed to insert part: {}", e);
+        error!("DB error during part insertion: {}", e);
         AppError::DatabaseError(format!("DB insert failed: {}", e))
     })?;
 
-    info!("New part created successfully: {}", part.id);
+    info!("Part created successfully: {}", part.id);
     Ok(Json(part))
 }
 
@@ -145,11 +171,11 @@ pub async fn get_parts(State(pool): State<PgPool>) -> Result<Json<Vec<Part>>, Ap
     .fetch_all(&pool)
     .await
     .map_err(|e| {
-        error!("Failed to fetch parts: {}", e);
+        error!("DB error during fetching parts: {}", e);
         AppError::DatabaseError(format!("DB select failed: {}", e))
     })?;
 
-    info!("Fetched {} parts from database", parts.len());
+    info!("Fetched {} parts successfully", parts.len());
     Ok(Json(parts))
 }
 
@@ -169,7 +195,7 @@ pub async fn get_part(
     .fetch_optional(&pool)
     .await
     .map_err(|e| {
-        error!("Failed to fetch part: {}", e);
+        error!("DB error during fetching part: {}", e);
         AppError::DatabaseError(format!("Failed to fetch part: {}", e))
     })?;
 
@@ -180,7 +206,6 @@ pub async fn get_part(
         }
         None => {
             info!("Part not found: {}", id);
-            // Err(StatusCode::NOT_FOUND)
             Err(AppError::NotFound(format!("Part not found: {}", id)))
         }
     }
@@ -192,11 +217,9 @@ pub async fn update_part(
     Path(id): Path<Uuid>,
     Json(updated_part): Json<NewPart>,
 ) -> Result<Json<Part>, AppError> {
-    updated_part.validate().map_err(|e| {
-        let errors = extract_validation_errors(e);
-        error!("Validation failed during update_part: {:?}", errors);
-        AppError::ValidationError(serde_json::to_string(&errors).unwrap())
-    })?;
+    updated_part
+        .validate()
+        .map_err(|e| AppError::ValidationError(extract_validation_errors(e)))?;
 
     let part = sqlx::query_as!(
         Part,
@@ -218,7 +241,7 @@ pub async fn update_part(
     .fetch_optional(&pool)
     .await
     .map_err(|e| {
-        error!("Failed to update part: {}", e);
+        error!("DB error during updating part: {}", e);
         AppError::DatabaseError(format!("Failed to update part: {}", e))
     })?;
 
@@ -246,7 +269,7 @@ pub async fn delete_part(
         .execute(&pool)
         .await
         .map_err(|e| {
-            error!("Failed to delete part: {}", e);
+            error!("DB error during deleting part: {}", e);
             AppError::DatabaseError(format!("Failed to delete part: {}", e))
         })?;
 
