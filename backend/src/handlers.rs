@@ -1,3 +1,4 @@
+use axum::response::{IntoResponse, Response};
 use axum::{Json, extract::Path, extract::State, http::StatusCode};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -5,6 +6,47 @@ use sqlx::PgPool;
 use tracing::{error, info};
 use uuid::Uuid;
 use validator::{Validate, ValidationErrors};
+
+#[derive(Debug, Serialize)]
+pub struct ErrorResponse {
+    pub error: ErrorDetail,
+}
+
+#[derive(Debug, Serialize)]
+pub struct ErrorDetail {
+    pub code: u16,
+    pub message: String,
+}
+
+#[derive(Debug)]
+pub enum AppError {
+    ValidationError(String),
+    NotFound(String),
+    DatabaseError(String),
+    // InternalError(String),
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let (status, message) = match self {
+            AppError::ValidationError(msg) => (StatusCode::BAD_REQUEST, msg),
+            AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
+            AppError::DatabaseError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            // AppError::InternalError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+        };
+
+        error!("Error occurred: {} - {}", status, message);
+
+        let body = Json(ErrorResponse {
+            error: ErrorDetail {
+                code: status.as_u16(),
+                message,
+            },
+        });
+
+        (status, body).into_response()
+    }
+}
 
 #[derive(Serialize, Debug)]
 pub struct ValidationErrorResponse {
@@ -63,14 +105,11 @@ pub struct NewPart {
 pub async fn create_part(
     State(pool): State<PgPool>,
     Json(new_part): Json<NewPart>,
-) -> Result<Json<Part>, (StatusCode, String)> {
+) -> Result<Json<Part>, AppError> {
     new_part.validate().map_err(|e| {
         let errors = extract_validation_errors(e);
         error!("Validation failed during create_part: {:?}", errors);
-        (
-            StatusCode::BAD_REQUEST,
-            serde_json::to_string(&errors).unwrap(),
-        )
+        AppError::ValidationError(serde_json::to_string(&errors).unwrap())
     })?;
 
     let part = sqlx::query_as!(
@@ -88,10 +127,7 @@ pub async fn create_part(
     .await
     .map_err(|e| {
         error!("Failed to insert part: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("DB insert failed: {}", e),
-        )
+        AppError::DatabaseError(format!("DB insert failed: {}", e))
     })?;
 
     info!("New part created successfully: {}", part.id);
@@ -99,9 +135,7 @@ pub async fn create_part(
 }
 
 // #[axum::debug_handler]
-pub async fn get_parts(
-    State(pool): State<PgPool>,
-) -> Result<Json<Vec<Part>>, (StatusCode, String)> {
+pub async fn get_parts(State(pool): State<PgPool>) -> Result<Json<Vec<Part>>, AppError> {
     let parts = sqlx::query_as!(
         Part,
         r#"SELECT id, part_number, name, description, kind, created_at, updated_at
@@ -112,10 +146,7 @@ pub async fn get_parts(
     .await
     .map_err(|e| {
         error!("Failed to fetch parts: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            format!("DB select failed: {}", e),
-        )
+        AppError::DatabaseError(format!("DB select failed: {}", e))
     })?;
 
     info!("Fetched {} parts from database", parts.len());
@@ -126,7 +157,7 @@ pub async fn get_parts(
 pub async fn get_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
-) -> Result<Json<Part>, StatusCode> {
+) -> Result<Json<Part>, AppError> {
     let part = sqlx::query_as!(
         Part,
         r#"SELECT id, part_number, name, description, kind, created_at, updated_at
@@ -139,7 +170,7 @@ pub async fn get_part(
     .await
     .map_err(|e| {
         error!("Failed to fetch part: {}", e);
-        StatusCode::INTERNAL_SERVER_ERROR
+        AppError::DatabaseError(format!("Failed to fetch part: {}", e))
     })?;
 
     match part {
@@ -149,24 +180,22 @@ pub async fn get_part(
         }
         None => {
             info!("Part not found: {}", id);
-            Err(StatusCode::NOT_FOUND)
+            // Err(StatusCode::NOT_FOUND)
+            Err(AppError::NotFound(format!("Part not found: {}", id)))
         }
     }
 }
 
-#[axum::debug_handler]
+// #[axum::debug_handler]
 pub async fn update_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
     Json(updated_part): Json<NewPart>,
-) -> Result<Json<Part>, (StatusCode, String)> {
+) -> Result<Json<Part>, AppError> {
     updated_part.validate().map_err(|e| {
         let errors = extract_validation_errors(e);
         error!("Validation failed during update_part: {:?}", errors);
-        (
-            StatusCode::BAD_REQUEST,
-            serde_json::to_string(&errors).unwrap(),
-        )
+        AppError::ValidationError(serde_json::to_string(&errors).unwrap())
     })?;
 
     let part = sqlx::query_as!(
@@ -190,10 +219,7 @@ pub async fn update_part(
     .await
     .map_err(|e| {
         error!("Failed to update part: {}", e);
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "Failed to update part".to_string(),
-        )
+        AppError::DatabaseError(format!("Failed to update part: {}", e))
     })?;
 
     match part {
@@ -203,7 +229,10 @@ pub async fn update_part(
         }
         None => {
             info!("Part not found for update: {}", id);
-            Err((StatusCode::NOT_FOUND, "Part Not Found".to_string()))
+            Err(AppError::NotFound(format!(
+                "Part not found for update: {}",
+                id
+            )))
         }
     }
 }
@@ -212,18 +241,21 @@ pub async fn update_part(
 pub async fn delete_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
-) -> Result<StatusCode, StatusCode> {
+) -> Result<StatusCode, AppError> {
     let result = sqlx::query!(r#"DELETE FROM parts WHERE id = $1"#, id)
         .execute(&pool)
         .await
         .map_err(|e| {
             error!("Failed to delete part: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
+            AppError::DatabaseError(format!("Failed to delete part: {}", e))
         })?;
 
     if result.rows_affected() == 0 {
         info!("Part not found for deletion: {}", id);
-        Err(StatusCode::NOT_FOUND)
+        Err(AppError::NotFound(format!(
+            "Part not found for deletion: {}",
+            id
+        )))
     } else {
         info!("Part deleted successfully: {}", id);
         Ok(StatusCode::NO_CONTENT)
