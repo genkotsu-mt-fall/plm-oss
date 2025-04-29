@@ -9,12 +9,13 @@ use validator::{Validate, ValidationErrors};
 
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
+    pub success: bool,
+    pub code: u16,
     pub error: ErrorDetail,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ErrorDetail {
-    pub code: u16,
     pub message: String,
 }
 
@@ -36,7 +37,7 @@ impl IntoResponse for AppError {
                     "Validation error ({}): {} error(s) - {:?}",
                     status,
                     errors.errors.len(),
-                    errors
+                    errors.errors
                 );
 
                 let body = Json(errors);
@@ -49,10 +50,9 @@ impl IntoResponse for AppError {
                 error!("NotFound error ({}): {}", status, message);
 
                 let body = Json(ErrorResponse {
-                    error: ErrorDetail {
-                        code: status.as_u16(),
-                        message,
-                    },
+                    success: false,
+                    code: status.as_u16(),
+                    error: ErrorDetail { message },
                 });
 
                 (status, body).into_response()
@@ -63,10 +63,9 @@ impl IntoResponse for AppError {
                 error!("Database error ({}): {}", status, message);
 
                 let body = Json(ErrorResponse {
-                    error: ErrorDetail {
-                        code: status.as_u16(),
-                        message,
-                    },
+                    success: false,
+                    code: status.as_u16(),
+                    error: ErrorDetail { message },
                 });
 
                 (status, body).into_response()
@@ -78,6 +77,8 @@ impl IntoResponse for AppError {
 
 #[derive(Serialize, Debug)]
 pub struct ValidationErrorResponse {
+    pub success: bool,
+    pub code: u16,
     pub errors: Vec<FieldError>,
 }
 
@@ -104,6 +105,8 @@ fn extract_validation_errors(errors: ValidationErrors) -> ValidationErrorRespons
         }
     }
     ValidationErrorResponse {
+        success: false,
+        code: StatusCode::BAD_REQUEST.as_u16(),
         errors: field_errors,
     }
 }
