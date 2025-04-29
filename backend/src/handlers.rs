@@ -110,8 +110,38 @@ fn extract_validation_errors(errors: ValidationErrors) -> ValidationErrorRespons
 
 #[derive(Debug, Serialize)]
 pub struct SuccessResponse<T> {
+    pub success: bool,
     pub code: u16,
     pub data: T,
+}
+
+impl<T> SuccessResponse<T> {
+    pub fn ok(data: T) -> Self {
+        SuccessResponse {
+            success: true,
+            code: StatusCode::OK.as_u16(),
+            data,
+        }
+    }
+
+    pub fn created(data: T) -> Self {
+        SuccessResponse {
+            success: true,
+            code: StatusCode::CREATED.as_u16(),
+            data,
+        }
+    }
+
+    pub fn no_content() -> Self
+    where
+        T: Default,
+    {
+        SuccessResponse {
+            success: true,
+            code: StatusCode::NO_CONTENT.as_u16(),
+            data: T::default(),
+        }
+    }
 }
 
 #[derive(sqlx::FromRow, Serialize)]
@@ -163,10 +193,7 @@ pub async fn create_part(
     })?;
 
     info!("Part created successfully: {}", part.id);
-    Ok(Json(SuccessResponse {
-        code: StatusCode::CREATED.as_u16(),
-        data: part,
-    }))
+    Ok(Json(SuccessResponse::created(part)))
 }
 
 // #[axum::debug_handler]
@@ -187,10 +214,7 @@ pub async fn get_parts(
     })?;
 
     info!("Fetched {} parts successfully", parts.len());
-    Ok(Json(SuccessResponse {
-        code: StatusCode::OK.as_u16(),
-        data: parts,
-    }))
+    Ok(Json(SuccessResponse::ok(parts)))
 }
 
 // #[axum::debug_handler]
@@ -216,10 +240,7 @@ pub async fn get_part(
     match part {
         Some(part) => {
             info!("Part found: {}", part.id);
-            Ok(Json(SuccessResponse {
-                code: StatusCode::OK.as_u16(),
-                data: part,
-            }))
+            Ok(Json(SuccessResponse::ok(part)))
         }
         None => {
             info!("Part not found: {}", id);
@@ -265,10 +286,7 @@ pub async fn update_part(
     match part {
         Some(part) => {
             info!("Part updated successfully: {}", part.id);
-            Ok(Json(SuccessResponse {
-                code: StatusCode::OK.as_u16(),
-                data: part,
-            }))
+            Ok(Json(SuccessResponse::ok(part)))
         }
         None => {
             info!("Part not found for update: {}", id);
@@ -301,9 +319,6 @@ pub async fn delete_part(
         )))
     } else {
         info!("Part deleted successfully: {}", id);
-        Ok(Json(SuccessResponse {
-            code: StatusCode::NO_CONTENT.as_u16(),
-            data: (),
-        }))
+        Ok(Json(SuccessResponse::no_content()))
     }
 }
