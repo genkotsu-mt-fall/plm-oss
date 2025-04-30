@@ -2,6 +2,7 @@ mod errors;
 mod models;
 mod responses;
 mod routes;
+mod services;
 
 use axum::{Router, routing::get};
 use dotenvy::dotenv;
