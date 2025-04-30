@@ -1,7 +1,12 @@
 use crate::errors::app_error::AppError;
 use crate::models::part::{NewPart, Part};
 use crate::responses::success::SuccessResponse;
-use crate::services::part_service::PartService;
+use crate::services::part::{
+    create_part as service_create_part, delete_part as service_delete_part,
+    get_part as service_get_part, get_parts as service_get_parts,
+    update_part as service_update_part,
+};
+// use crate::services::part_service::PartService;
 
 use axum::{Json, extract::Path, extract::State};
 use sqlx::PgPool;
@@ -12,7 +17,7 @@ pub async fn create_part(
     State(pool): State<PgPool>,
     Json(new_part): Json<NewPart>,
 ) -> Result<Json<SuccessResponse<Part>>, AppError> {
-    let part = PartService::create_part(&pool, new_part).await?;
+    let part = service_create_part(&pool, new_part).await?;
     Ok(Json(SuccessResponse::created(part)))
 }
 
@@ -20,7 +25,7 @@ pub async fn create_part(
 pub async fn get_parts(
     State(pool): State<PgPool>,
 ) -> Result<Json<SuccessResponse<Vec<Part>>>, AppError> {
-    let parts = PartService::get_parts(&pool).await?;
+    let parts = service_get_parts(&pool).await?;
     Ok(Json(SuccessResponse::ok(parts)))
 }
 
@@ -29,7 +34,7 @@ pub async fn get_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<SuccessResponse<Part>>, AppError> {
-    let part = PartService::get_part(&pool, id).await?;
+    let part = service_get_part(&pool, id).await?;
     Ok(Json(SuccessResponse::ok(part)))
 }
 
@@ -39,7 +44,7 @@ pub async fn update_part(
     Path(id): Path<Uuid>,
     Json(updated_part): Json<NewPart>,
 ) -> Result<Json<SuccessResponse<Part>>, AppError> {
-    let part = PartService::update_part(&pool, id, updated_part).await?;
+    let part = service_update_part(&pool, id, updated_part).await?;
     Ok(Json(SuccessResponse::ok(part)))
 }
 
@@ -48,6 +53,6 @@ pub async fn delete_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<SuccessResponse<()>>, AppError> {
-    PartService::delete_part(&pool, id).await?;
+    service_delete_part(&pool, id).await?;
     Ok(Json(SuccessResponse::no_content()))
 }
