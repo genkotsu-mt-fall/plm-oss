@@ -18,7 +18,9 @@ pub struct LoginResponse {
 }
 
 pub async fn login(Json(payload): Json<LoginRequest>) -> Result<Json<LoginResponse>, StatusCode> {
-    if payload._email != "user@example.com" || payload._password != "password123" {
+    let expected_email = std::env::var("TEST_USER_EMAIL").unwrap_or_default();
+    let expected_password = std::env::var("TEST_USER_PASSWORD").unwrap_or_default();
+    if payload._email != expected_email || payload._password != expected_password {
         return Err(StatusCode::UNAUTHORIZED);
     }
 
@@ -34,7 +36,7 @@ pub async fn login(Json(payload): Json<LoginRequest>) -> Result<Json<LoginRespon
         exp: expiration,
     };
 
-    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "secret".to_string());
+    let secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| "".to_string());
 
     let token = encode(
         &Header::default(),
