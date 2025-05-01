@@ -16,7 +16,7 @@ pub async fn get_parts(pool: &PgPool) -> Result<Vec<Part>, AppError> {
     .await
     .map_err(|e| {
         error!("DB error during fetching parts: {}", e);
-        AppError::DatabaseError(format!("DB select failed: {}", e))
+        AppError::DatabaseError("DB select failed".to_string())
     })?;
 
     info!("Fetched {} parts successfully", parts.len());
@@ -36,7 +36,7 @@ pub async fn get_part(pool: &PgPool, id: Uuid) -> Result<Part, AppError> {
     .await
     .map_err(|e| {
         error!("DB error during fetching part: {}", e);
-        AppError::DatabaseError(format!("Failed to fetch part: {}", e))
+        AppError::DatabaseError("Failed to fetch part".to_string())
     })?;
 
     match part {

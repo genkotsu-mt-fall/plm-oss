@@ -10,7 +10,7 @@ pub async fn delete_part(pool: &PgPool, id: Uuid) -> Result<(), AppError> {
         .await
         .map_err(|e| {
             error!("DB error during deleting part: {}", e);
-            AppError::DatabaseError(format!("Failed to delete part: {}", e))
+            AppError::DatabaseError("Failed to delete part".to_string())
         })?;
 
     if result.rows_affected() == 0 {
