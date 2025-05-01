@@ -10,7 +10,7 @@ use axum::routing::post;
 use axum::{Router, http, middleware, routing::get};
 use dotenvy::dotenv;
 use http::header::{AUTHORIZATION, CONTENT_TYPE};
-use routes::auth::login;
+use routes::auth::{login, signup};
 use routes::parts::{create_part, delete_part, get_part, get_parts, update_part};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
@@ -76,6 +76,7 @@ async fn main() {
         //     get(get_part).put(update_part).delete(delete_part),
         // )
         .route("/login", post(login))
+        .route("/signup", post(signup))
         .merge(protected_routes)
         .with_state(pool)
         .layer(cors)

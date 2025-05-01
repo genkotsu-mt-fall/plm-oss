@@ -9,8 +9,10 @@ use tracing::error;
 pub enum AppError {
     ValidationError(ValidationErrorResponse),
     NotFound(String),
+    Conflict(String),
     DatabaseError(String),
-    // InternalError(String),
+    InternalError(String),
+    Unauthorized(String),
 }
 
 impl IntoResponse for AppError {
@@ -43,6 +45,19 @@ impl IntoResponse for AppError {
 
                 (status, body).into_response()
             }
+            AppError::Conflict(message) => {
+                let status = StatusCode::CONFLICT;
+
+                error!("Conflict ({}): {}", status, message);
+
+                let body = Json(ErrorResponse {
+                    success: false,
+                    code: status.as_u16(),
+                    error: ErrorDetail { message },
+                });
+
+                (status, body).into_response()
+            }
             AppError::DatabaseError(message) => {
                 let status = StatusCode::INTERNAL_SERVER_ERROR;
 
@@ -55,7 +70,33 @@ impl IntoResponse for AppError {
                 });
 
                 (status, body).into_response()
-            } // AppError::InternalError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
+            }
+            AppError::InternalError(message) => {
+                let status = StatusCode::INTERNAL_SERVER_ERROR;
+
+                error!("Internal error ({}): {}", status, message);
+
+                let body = Json(ErrorResponse {
+                    success: false,
+                    code: status.as_u16(),
+                    error: ErrorDetail { message },
+                });
+
+                (status, body).into_response()
+            }
+            AppError::Unauthorized(message) => {
+                let status = StatusCode::UNAUTHORIZED;
+
+                error!("Unauthorized error ({}): {}", status, message);
+
+                let body = Json(ErrorResponse {
+                    success: false,
+                    code: status.as_u16(),
+                    error: ErrorDetail { message },
+                });
+
+                (status, body).into_response()
+            }
         };
         response
     }
