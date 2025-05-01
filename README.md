@@ -68,11 +68,10 @@ Create a `.env` file in the `backend/` directory:
 ```env
 DATABASE_URL=postgres://user:pass@db:5432/plmdb
 JWT_SECRET=your_jwt_secret
-TEST_USER_EMAIL=user@example.com
-TEST_USER_PASSWORD=password123
 ```
 
 Use `.env.example` as a reference.
+✅ `TEST_USER_EMAIL` / `PASSWORD` は不要になったので削除
 
 ---
 
@@ -80,23 +79,38 @@ Use `.env.example` as a reference.
 
 You can test the API manually using PowerShell and `curl.exe`.
 
-### 1. Get JWT Token
+### 1. Signup (ユーザー登録)
 
 ```powershell
-curl.exe -X POST http://localhost:3000/login `
+curl.exe -X POST http://localhost:3000/signup `
   -H "Content-Type: application/json" `
-  -d '{\"_email\":\"user@example.com\", \"_password\":\"password123\"}'
+  -d '{\"login_name\":\"testuser\", \"password\":\"password123\"}'
 ```
 
-Response:
+Response (登録成功):
 
+```json
+{
+  "login_name": "testuser"
+}
+```
+
+### 2. Login (JWT取得)
+
+```powershell
+ curl.exe -X POST http://localhost:3000/login `
+   -H "Content-Type: application/json" `
+   -d '{\"login_name\":\"testuser\", \"password\":\"password123\"}'
+```
+
+Response (ログイン成功):
 ```json
 {
   "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
 }
 ```
 
-### 2. Use token to access protected route
+### 3. Use token to access protected route
 
 ```powershell
 curl.exe -X GET "http://localhost:3000/parts" `
