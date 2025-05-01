@@ -9,3 +9,5 @@ frontend/node_modules
 
 # VSCode settings
 .vscode
+
+.env
