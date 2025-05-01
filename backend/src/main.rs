@@ -1,16 +1,24 @@
+mod auth;
 mod errors;
 mod models;
 mod responses;
 mod routes;
 mod services;
 
-use axum::{Router, routing::get};
+use auth::jwt_auth;
+use axum::routing::post;
+use axum::{Router, http, middleware, routing::get};
 use dotenvy::dotenv;
+use http::header::{AUTHORIZATION, CONTENT_TYPE};
+use routes::auth::login;
 use routes::parts::{create_part, delete_part, get_part, get_parts, update_part};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use tokio::net::TcpListener;
-use tower_http::trace::TraceLayer;
+use tower_http::{
+    cors::{Any, CorsLayer},
+    trace::TraceLayer,
+};
 use tracing::{error, info};
 use tracing_subscriber::FmtSubscriber;
 
@@ -42,14 +50,35 @@ async fn main() {
 
     info!("Successfully connected to the database");
 
-    let app = Router::new()
-        .route("/healthz", get(health_check))
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([
+            axum::http::Method::GET,
+            axum::http::Method::POST,
+            axum::http::Method::PUT,
+            axum::http::Method::DELETE,
+        ])
+        .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
+
+    let protected_routes = Router::new()
         .route("/parts", get(get_parts).post(create_part))
         .route(
             "/parts/{id}",
             get(get_part).put(update_part).delete(delete_part),
         )
+        .route_layer(middleware::from_fn(jwt_auth));
+
+    let app = Router::new()
+        .route("/healthz", get(health_check))
+        // .route("/parts", get(get_parts).post(create_part))
+        // .route(
+        //     "/parts/{id}",
+        //     get(get_part).put(update_part).delete(delete_part),
+        // )
+        .route("/login", post(login))
+        .merge(protected_routes)
         .with_state(pool)
+        .layer(cors)
         .layer(TraceLayer::new_for_http()); // HTTPリクエストのログ出力
 
     let listener = TcpListener::bind("0.0.0.0:3000")
