@@ -27,7 +27,7 @@ pub async fn create_part(pool: &PgPool, new_part: NewPart) -> Result<Part, AppEr
     .await
     .map_err(|e| {
         error!("DB error during part insertion: {}", e);
-        AppError::DatabaseError(format!("DB insert failed: {}", e))
+        AppError::DatabaseError("DB insert failed".to_string())
     })?;
 
     info!("Part created successfully: {}", part.id);

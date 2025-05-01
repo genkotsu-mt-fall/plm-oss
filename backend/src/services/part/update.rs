@@ -33,7 +33,7 @@ pub async fn update_part(pool: &PgPool, id: Uuid, updated_part: NewPart) -> Resu
     .await
     .map_err(|e| {
         error!("DB error during updating part: {}", e);
-        AppError::DatabaseError(format!("Failed to update part: {}", e))
+        AppError::DatabaseError("Failed to update part".to_string())
     })?;
 
     match part {
