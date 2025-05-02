@@ -7,6 +7,7 @@ mod services;
 
 use auth::jwt::jwt_auth;
 use auth::route::{login, signup};
+use axum::http::HeaderValue;
 use axum::routing::post;
 use axum::{Router, http, middleware, routing::get};
 use dotenvy::dotenv;
@@ -15,10 +16,7 @@ use routes::parts::{create_part, delete_part, get_part, get_parts, update_part};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use tokio::net::TcpListener;
-use tower_http::{
-    cors::{Any, CorsLayer},
-    trace::TraceLayer,
-};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::{error, info};
 use tracing_subscriber::FmtSubscriber;
 
@@ -37,6 +35,7 @@ async fn main() {
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 
     let database_url = env::var("DATABASE_URL").expect("DATABASE_URLが設定されていません。");
+    let cors_origin = env::var("CORS_ORIGIN").expect("CORS_ORIGIN must be set");
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
@@ -51,12 +50,16 @@ async fn main() {
     info!("Successfully connected to the database");
 
     let cors = CorsLayer::new()
-        .allow_origin(Any)
+        .allow_origin(
+            cors_origin
+                .parse::<HeaderValue>()
+                .expect("Invalid CORS_ORIGIN value"),
+        )
         .allow_methods([
-            axum::http::Method::GET,
-            axum::http::Method::POST,
-            axum::http::Method::PUT,
-            axum::http::Method::DELETE,
+            http::Method::GET,
+            http::Method::POST,
+            http::Method::PUT,
+            http::Method::DELETE,
         ])
         .allow_headers([AUTHORIZATION, CONTENT_TYPE]);
 

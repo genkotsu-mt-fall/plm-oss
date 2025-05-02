@@ -66,8 +66,14 @@ Then open: [http://localhost:3000/healthz](http://localhost:3000/healthz) to che
 Create a `.env` file in the `backend/` directory:
 
 ```env
+# Database
 DATABASE_URL=postgres://user:pass@db:5432/plmdb
+# Authentication (JWT)
 JWT_SECRET=your_jwt_secret
+# CORS
+# 開発時: フロントエンドのURLを指定
+# 本番時: https://your-app.com などに変更
+CORS_ORIGIN=http://localhost:5173
 ```
 
 Use `.env.example` as a reference.
