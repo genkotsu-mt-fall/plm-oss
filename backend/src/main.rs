@@ -5,12 +5,12 @@ mod responses;
 mod routes;
 mod services;
 
-use auth::jwt_auth;
+use auth::jwt::jwt_auth;
+use auth::route::{login, signup};
 use axum::routing::post;
 use axum::{Router, http, middleware, routing::get};
 use dotenvy::dotenv;
 use http::header::{AUTHORIZATION, CONTENT_TYPE};
-use routes::auth::{login, signup};
 use routes::parts::{create_part, delete_part, get_part, get_parts, update_part};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
