@@ -91,7 +91,11 @@ Response (登録成功):
 
 ```json
 {
-  "login_name": "testuser"
+  "success": true,
+  "code": 201,
+  "data": {
+    "login_name": "testuser"
+  }
 }
 ```
 
@@ -106,7 +110,11 @@ Response (登録成功):
 Response (ログイン成功):
 ```json
 {
-  "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+  "success": true,
+  "code": 200,
+  "data": {
+    "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
+  }
 }
 ```
 

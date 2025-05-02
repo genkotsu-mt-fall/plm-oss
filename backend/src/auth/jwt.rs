@@ -4,15 +4,12 @@ use axum::{
     middleware::Next,
     response::Response,
 };
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
-use serde::{Deserialize, Serialize};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use tracing::error;
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Claims {
-    pub sub: String,
-    pub exp: usize,
-}
+use crate::errors::app_error::AppError;
+
+use super::domain::Claims;
 
 pub async fn jwt_auth(req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
     let token = req
@@ -37,4 +34,16 @@ pub async fn jwt_auth(req: Request<Body>, next: Next) -> Result<Response, Status
             Err(StatusCode::UNAUTHORIZED)
         }
     }
+}
+
+pub fn generate_jwt(claims: Claims) -> Result<String, AppError> {
+    let secret = std::env::var("JWT_SECRET")
+        .map_err(|_| AppError::InternalError("JWT secret is not set.".into()))?;
+
+    encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(secret.as_bytes()),
+    )
+    .map_err(|_| AppError::InternalError("Login failed: generate JWT token.".to_string()))
 }
