@@ -23,3 +23,43 @@ pub struct NewPart {
     pub description: Option<String>,
     pub kind: Option<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use validator::Validate;
+
+    use super::NewPart;
+
+    #[test]
+    fn test_valid_new_part() {
+        let new_part = NewPart {
+            part_number: "ABC-123".to_string(),
+            name: "Test Part".to_string(),
+            description: Some("A test part".to_string()),
+            kind: Some("TypeA".to_string()),
+        };
+        assert!(new_part.validate().is_ok())
+    }
+
+    #[test]
+    fn test_invalid_empty_part_number() {
+        let new_part = NewPart {
+            part_number: "".to_string(),
+            name: "Test Part".to_string(),
+            description: None,
+            kind: None,
+        };
+        assert!(new_part.validate().is_err())
+    }
+
+    #[test]
+    fn test_invalid_empty_name() {
+        let new_part = NewPart {
+            part_number: "ABC-123".to_string(),
+            name: "".to_string(),
+            description: None,
+            kind: None,
+        };
+        assert!(new_part.validate().is_err())
+    }
+}
