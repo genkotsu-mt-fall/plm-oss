@@ -1,9 +1,8 @@
 mod auth;
 mod errors;
 mod models;
+mod part;
 mod responses;
-mod routes;
-mod services;
 
 use auth::jwt::jwt_auth;
 use auth::route::{login, signup};
@@ -12,8 +11,8 @@ use axum::routing::post;
 use axum::{Router, http, middleware, routing::get};
 use dotenvy::dotenv;
 use http::header::{AUTHORIZATION, CONTENT_TYPE};
-use models::part::{NewPart, Part};
-use routes::parts::{create_part, delete_part, get_part, get_parts, update_part};
+use part::domain::{NewPart, Part};
+use part::route::{create_part, delete_part, get_part, get_parts, update_part};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
 use tokio::net::TcpListener;
@@ -111,11 +110,11 @@ async fn main() {
 #[derive(OpenApi)]
 #[openapi(
     paths(
-        routes::parts::create_part,
-        routes::parts::get_part,
-        routes::parts::get_parts,
-        routes::parts::update_part,
-        routes::parts::delete_part,
+        part::route::create_part,
+        part::route::get_part,
+        part::route::get_parts,
+        part::route::update_part,
+        part::route::delete_part,
         auth::route::login,
         auth::route::signup,
     ),

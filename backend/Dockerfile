@@ -1,7 +1,7 @@
 # ビルドステージ
 FROM rust:slim AS builder
 
-RUN apt-get update
+RUN apt-get update && apt-get install -y curl
 
 RUN rustup update && \
     rustup component add rustfmt && \
