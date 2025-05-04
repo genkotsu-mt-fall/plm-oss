@@ -49,6 +49,12 @@ async fn main() {
 
     info!("Successfully connected to the database");
 
+    // マイグレーションの自動実行
+    if let Err(err) = sqlx::migrate!("./migrations").run(&pool).await {
+        error!("Failed to run database migrations: {}", err);
+        panic!("Migration error");
+    }
+
     let cors = CorsLayer::new()
         .allow_origin(
             cors_origin
