@@ -4,8 +4,9 @@ use crate::responses::error::{ErrorDetail, ErrorResponse};
 use axum::response::{IntoResponse, Response};
 use axum::{Json, http::StatusCode};
 use tracing::error;
+use utoipa::ToSchema;
 
-#[derive(Debug)]
+#[derive(Debug, ToSchema)]
 pub enum AppError {
     ValidationError(ValidationErrorResponse),
     NotFound(String),

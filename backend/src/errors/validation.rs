@@ -1,15 +1,18 @@
 use axum::http::StatusCode;
 use serde::Serialize;
+use utoipa::ToSchema;
 use validator::ValidationErrors;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, ToSchema)]
 pub struct ValidationErrorResponse {
+    #[schema(example = false)]
     pub success: bool,
+    #[schema(example = 400)]
     pub code: u16,
     pub errors: Vec<FieldError>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, ToSchema)]
 pub struct FieldError {
     pub field: String,
     pub message: String,

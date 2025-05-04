@@ -194,6 +194,23 @@ It covers:
 
 ---
 
+## 📚 API Documentation (Swagger UI)
+
+You can view the OpenAPI documentation in your browser after launching the backend:
+
+* Open: [http://localhost:3000/docs](http://localhost:3000/docs)
+
+It includes:
+
+* ✅ Auth endpoints (`/signup`, `/login`)
+* ✅ Part management (`/parts`, `/parts/{id}`)
+* ✅ Schema definitions (`Part`, `NewPart`, etc.)
+* ✅ Error/Validation responses
+
+> If you're modifying routes or models, documentation is automatically updated thanks to [`utoipa`](https://docs.rs/utoipa/latest/utoipa/) and [`utoipa-swagger-ui`](https://docs.rs/utoipa-swagger-ui/latest/).
+
+---
+
 ## 📁 Project Structure
 
 ```
