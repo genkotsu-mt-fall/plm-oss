@@ -6,9 +6,12 @@ RUN apt-get update && \
 
 WORKDIR /workspace
 
-COPY tests/api ./tests/
+COPY tests/api/wait-for-backend.sh ./tests/wait-for-backend.sh
+COPY tests/api/part/api_test.sh ./tests/part/api_test.sh
+COPY tests/api/run_all.sh ./tests/run_all.sh
 
-RUN chmod +x ./tests/part/api_test.sh ./tests/wait-for-backend.sh
+RUN chmod +x ./tests/*.sh ./tests/part/api_test.sh
 
 # CMD ["./tests/part/api_test.sh"]
-CMD ["bash", "-c", "./tests/wait-for-backend.sh && ./tests/part/api_test.sh"]
+# CMD ["bash", "-c", "./tests/wait-for-backend.sh && ./tests/part/api_test.sh"]
+CMD ["./tests/run_all.sh"]

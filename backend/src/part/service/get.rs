@@ -1,5 +1,5 @@
 use crate::errors::app_error::AppError;
-use crate::models::part::Part;
+use crate::part::domain::Part;
 
 use sqlx::PgPool;
 use tracing::{error, info};

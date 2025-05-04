@@ -1,6 +1,6 @@
 use crate::errors::app_error::AppError;
 use crate::errors::validation::extract_validation_errors;
-use crate::models::part::{NewPart, Part};
+use crate::part::domain::{NewPart, Part};
 
 use sqlx::PgPool;
 use tracing::{error, info};

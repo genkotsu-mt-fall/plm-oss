@@ -1,13 +1,13 @@
 use crate::errors::app_error::AppError;
 use crate::errors::validation::ValidationErrorResponse;
-use crate::models::part::{NewPart, Part};
-use crate::responses::error::ErrorResponse;
-use crate::responses::success::SuccessResponse;
-use crate::services::part::{
+use crate::part::domain::{NewPart, Part};
+use crate::part::service::{
     create_part as service_create_part, delete_part as service_delete_part,
     get_part as service_get_part, get_parts as service_get_parts,
     update_part as service_update_part,
 };
+use crate::responses::error::ErrorResponse;
+use crate::responses::success::SuccessResponse;
 // use crate::services::part_service::PartService;
 
 use axum::{Json, extract::Path, extract::State};
