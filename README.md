@@ -53,7 +53,6 @@ DATABASE_URL=postgres://user:pass@db:5432/plmdb
 
 ```bash
 cd backend
-cargo sqlx migrate run
 cargo run
 ```
 
@@ -134,12 +133,64 @@ curl.exe -X GET "http://localhost:3000/parts" `
 
 ---
 
-<!-- ## 🧪 Run Tests
+## 🧪 Run Tests
+
+You can run **unit tests** (e.g. validation logic) using Cargo:
 
 ```bash
 cd backend
 cargo test
-``` -->
+````
+
+And you can run **full API integration tests** using Docker Compose:
+
+```bash
+docker-compose -f docker-compose.backend.test.yml --project-name test up --build --abort-on-container-exit
+```
+
+Sample output when all tests pass:
+
+```
+test-runner-1  | 🎉 All API tests passed!
+test-runner-1 exited with code 0
+Aborting on container exit...
+✔ Container test-test-runner-1  Stopped
+✔ Container test-backend-1      Stopped
+✔ Container test-db-1           Stopped
+```
+
+### What this does
+
+* 🔧 Builds backend, database, and test-runner containers
+* 🕒 Waits for the backend to be ready (`/healthz`)
+* 🧪 Executes test scripts in `tests/api`
+* 🧹 Cleans up all containers after execution
+
+### Test Structure
+
+Test logic is defined in:
+
+```
+tests/api/part/api_test.sh
+```
+
+It covers:
+
+* ✅ Health check
+* ✅ User signup & login
+* ✅ JWT-protected routes (`/parts`)
+* ✅ Validation errors
+* ✅ CRUD: Create, Get, Update, Delete
+
+
+> 💡 **Note**:  
+> If the full API integration tests fail during backend compilation (due to missing `.sqlx` data), try running:
+>
+> ```bash
+> cargo sqlx prepare --workspace -- --locked
+> ```
+>
+> This generates `.sqlx` data required for offline SQLx builds inside the Docker image.
 
 ---
 

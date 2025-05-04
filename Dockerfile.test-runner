@@ -1,0 +1,14 @@
+FROM debian:bookworm-slim
+
+RUN apt-get update && \
+    apt-get install -y curl bash jq && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /workspace
+
+COPY tests/api ./tests/
+
+RUN chmod +x ./tests/part/api_test.sh ./tests/wait-for-backend.sh
+
+# CMD ["./tests/part/api_test.sh"]
+CMD ["bash", "-c", "./tests/wait-for-backend.sh && ./tests/part/api_test.sh"]
