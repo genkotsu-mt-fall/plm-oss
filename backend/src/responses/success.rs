@@ -1,8 +1,10 @@
 use axum::http::StatusCode;
 use serde::Serialize;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct SuccessResponse<T> {
+    #[schema(example = true)]
     pub success: bool,
     pub code: u16,
     pub data: T,

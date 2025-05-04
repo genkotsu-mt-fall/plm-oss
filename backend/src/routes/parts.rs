@@ -1,5 +1,7 @@
 use crate::errors::app_error::AppError;
+use crate::errors::validation::ValidationErrorResponse;
 use crate::models::part::{NewPart, Part};
+use crate::responses::error::ErrorResponse;
 use crate::responses::success::SuccessResponse;
 use crate::services::part::{
     create_part as service_create_part, delete_part as service_delete_part,
@@ -13,6 +15,12 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 // #[axum::debug_handler]
+#[utoipa::path(post, path = "/parts", request_body = NewPart, responses(
+    (status = 201, description = "Part created successfully", body = SuccessResponse<Part>),
+    (status = 400, description = "Validation error", body = ValidationErrorResponse),
+    (status = 401, description = "Unauthorized error", body = ErrorResponse),
+    (status = 500, description = "Database error", body = ErrorResponse),
+), tags = ["parts"], security(("bearerAuth" = [])))]
 pub async fn create_part(
     State(pool): State<PgPool>,
     Json(new_part): Json<NewPart>,
@@ -22,6 +30,11 @@ pub async fn create_part(
 }
 
 // #[axum::debug_handler]
+#[utoipa::path(get, path = "/parts", responses(
+    (status = 200, description = "Fetched parts successfully", body = SuccessResponse<Vec<Part>>),
+    (status = 401, description = "Unauthorized error", body = ErrorResponse),
+    (status = 500, description = "Database error", body = ErrorResponse),
+), tags = ["parts"], security(("bearerAuth" = [])))]
 pub async fn get_parts(
     State(pool): State<PgPool>,
 ) -> Result<Json<SuccessResponse<Vec<Part>>>, AppError> {
@@ -30,6 +43,12 @@ pub async fn get_parts(
 }
 
 // #[axum::debug_handler]
+#[utoipa::path(get, path = "/parts/{id}", params(("id" = Uuid, Path, description = "Part ID to fetch")),  responses(
+    (status = 200, description = "Fetched part successfully", body = SuccessResponse<Part>),
+    (status = 401, description = "Unauthorized error", body = ErrorResponse),
+    (status = 404, description = "NotFound error", body = ErrorResponse),
+    (status = 500, description = "Database error", body = ErrorResponse),
+), tags = ["parts"], security(("bearerAuth" = [])))]
 pub async fn get_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
@@ -39,6 +58,13 @@ pub async fn get_part(
 }
 
 // #[axum::debug_handler]
+#[utoipa::path(put, path = "/parts/{id}", params(("id" = Uuid, Path, description = "Part ID to update")) , request_body = NewPart, responses(
+    (status = 200, description = "Part updated successfully", body = SuccessResponse<Part>),
+    (status = 400, description = "Validation error", body = ValidationErrorResponse),
+    (status = 401, description = "Unauthorized error", body = ErrorResponse),
+    (status = 404, description = "NotFound error", body = ErrorResponse),
+    (status = 500, description = "Database error", body = ErrorResponse),
+), tags = ["parts"], security(("bearerAuth" = [])))]
 pub async fn update_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
@@ -49,6 +75,12 @@ pub async fn update_part(
 }
 
 // #[axum::debug_handler]
+#[utoipa::path(delete, path = "/parts/{id}", params(("id" = Uuid, Path, description = "Part ID to delete")) , responses(
+    (status = 204, description = "Part deleted successfully"),
+    (status = 401, description = "Unauthorized error", body = ErrorResponse),
+    (status = 404, description = "NotFound error", body = ErrorResponse),
+    (status = 500, description = "Database error", body = ErrorResponse),
+), tags = ["parts"], security(("bearerAuth" = [])))]
 pub async fn delete_part(
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,

@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(sqlx::FromRow, Serialize)]
+#[derive(sqlx::FromRow, Serialize, ToSchema)]
 pub struct Part {
     pub id: Uuid,
     pub part_number: String,
@@ -14,7 +15,7 @@ pub struct Part {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Deserialize, Validate)]
+#[derive(Deserialize, Validate, ToSchema)]
 pub struct NewPart {
     #[validate(length(min = 1, message = "part_number must not be empty"))]
     pub part_number: String,

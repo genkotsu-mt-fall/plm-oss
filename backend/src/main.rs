@@ -12,6 +12,7 @@ use axum::routing::post;
 use axum::{Router, http, middleware, routing::get};
 use dotenvy::dotenv;
 use http::header::{AUTHORIZATION, CONTENT_TYPE};
+use models::part::{NewPart, Part};
 use routes::parts::{create_part, delete_part, get_part, get_parts, update_part};
 use sqlx::postgres::PgPoolOptions;
 use std::env;
@@ -19,6 +20,8 @@ use tokio::net::TcpListener;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::{error, info};
 use tracing_subscriber::FmtSubscriber;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 async fn health_check() -> &'static str {
     "OK"
@@ -78,6 +81,7 @@ async fn main() {
         .route_layer(middleware::from_fn(jwt_auth));
 
     let app = Router::new()
+        .merge(SwaggerUi::new("/docs").url("/api-docs/openapi.json", ApiDoc::openapi()))
         .route("/healthz", get(health_check))
         // .route("/parts", get(get_parts).post(create_part))
         // .route(
@@ -103,3 +107,22 @@ async fn main() {
         error!("Server error: {}", e);
     };
 }
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        routes::parts::create_part,
+        routes::parts::get_part,
+        routes::parts::get_parts,
+        routes::parts::update_part,
+        routes::parts::delete_part,
+        auth::route::login,
+        auth::route::signup,
+    ),
+    components(schemas(Part, NewPart)),
+    tags(
+        (name = "parts", description = "Part management endpoints"),
+        (name = "auth", description = "Authentication endpoints"),
+    )
+)]
+pub struct ApiDoc;
