@@ -14,7 +14,7 @@ use crate::errors::app_error::AppError;
     request_body = SignupRequest,
     responses(
         (status = 201, description = "User created successfully", body = SuccessResponse<SignupResponse>),
-        (status = 409, description = "Conflict (already exists)", body = ErrorResponse),
+        // (status = 409, description = "Conflict (already exists)", body = ErrorResponse),
         (status = 500, description = "Internal server error", body = ErrorResponse)
     ),
     tags = ["auth"]
