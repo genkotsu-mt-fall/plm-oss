@@ -1,0 +1,1 @@
+ALTER TABLE parts ADD COLUMN created_by UUID REFERENCES users(id);

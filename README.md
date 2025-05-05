@@ -131,6 +131,18 @@ curl.exe -X GET "http://localhost:3000/parts" `
   -H "Authorization: Bearer <your_token_here>"
 ```
 
+### 🛡 Authorization Rules
+
+Some endpoints require that the user owns the resource being modified:
+
+| Endpoint               | Rule                           |
+|------------------------|--------------------------------|
+| `PUT /parts/{id}`      | User must own the part         |
+| `DELETE /parts/{id}`   | User must own the part         |
+
+If the resource does not belong to the user, a `401 Unauthorized` error is returned.
+
+
 ---
 
 ## 🧪 Run Tests

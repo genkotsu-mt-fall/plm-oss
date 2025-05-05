@@ -12,6 +12,7 @@ pub struct Part {
     pub description: Option<String>,
     pub kind: Option<String>,
     pub created_at: Option<DateTime<Utc>>,
+    pub created_by: Option<Uuid>,
     pub updated_at: Option<DateTime<Utc>>,
 }
 

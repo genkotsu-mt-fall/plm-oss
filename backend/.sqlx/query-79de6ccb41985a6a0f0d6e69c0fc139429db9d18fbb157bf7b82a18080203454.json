@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, part_number, name, description, kind, created_at, updated_at\n        FROM parts\n        WHERE id = $1\n        ",
+  "query": "SELECT id, part_number, name, description, kind, created_at, created_by, updated_at\n        FROM parts\n        ",
   "describe": {
     "columns": [
       {
@@ -35,14 +35,17 @@
       },
       {
         "ordinal": 6,
+        "name": "created_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
@@ -51,8 +54,9 @@
       true,
       true,
       true,
+      true,
       true
     ]
   },
-  "hash": "4188e2affe53eb55975440c0bb79c2cc3db64b3340a12374fad4c6e973ce242a"
+  "hash": "79de6ccb41985a6a0f0d6e69c0fc139429db9d18fbb157bf7b82a18080203454"
 }

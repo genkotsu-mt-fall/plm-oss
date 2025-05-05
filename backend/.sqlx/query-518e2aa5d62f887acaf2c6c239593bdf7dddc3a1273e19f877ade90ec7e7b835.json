@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO parts (id, part_number, name, description, kind)\n           VALUES ($1, $2, $3, $4, $5)\n           RETURNING id, part_number, name, description, kind, created_at, updated_at",
+  "query": "INSERT INTO parts (id, part_number, name, description, kind, created_by)\n           VALUES ($1, $2, $3, $4, $5, $6)\n           RETURNING id, part_number, name, description, kind, created_at, created_by, updated_at",
   "describe": {
     "columns": [
       {
@@ -35,6 +35,11 @@
       },
       {
         "ordinal": 6,
+        "name": "created_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -45,7 +50,8 @@
         "Text",
         "Text",
         "Text",
-        "Text"
+        "Text",
+        "Uuid"
       ]
     },
     "nullable": [
@@ -55,8 +61,9 @@
       true,
       true,
       true,
+      true,
       true
     ]
   },
-  "hash": "f43c47b8cb05bc988f6a709953460c22ee7ee36fd6f59ccad258b73ca09a16b4"
+  "hash": "518e2aa5d62f887acaf2c6c239593bdf7dddc3a1273e19f877ade90ec7e7b835"
 }

@@ -8,7 +8,7 @@ use uuid::Uuid;
 pub async fn get_parts(pool: &PgPool) -> Result<Vec<Part>, AppError> {
     let parts = sqlx::query_as!(
         Part,
-        r#"SELECT id, part_number, name, description, kind, created_at, updated_at
+        r#"SELECT id, part_number, name, description, kind, created_at, created_by, updated_at
         FROM parts
         "#
     )
@@ -26,7 +26,7 @@ pub async fn get_parts(pool: &PgPool) -> Result<Vec<Part>, AppError> {
 pub async fn get_part(pool: &PgPool, id: Uuid) -> Result<Part, AppError> {
     let part = sqlx::query_as!(
         Part,
-        r#"SELECT id, part_number, name, description, kind, created_at, updated_at
+        r#"SELECT id, part_number, name, description, kind, created_at, created_by, updated_at
         FROM parts
         WHERE id = $1
         "#,
