@@ -1,3 +1,4 @@
+use crate::auth::domain::Claims;
 use crate::errors::app_error::AppError;
 use crate::errors::validation::extract_validation_errors;
 use crate::part::domain::{NewPart, Part};
@@ -7,10 +8,19 @@ use tracing::{error, info};
 use uuid::Uuid;
 use validator::Validate;
 
-pub async fn update_part(pool: &PgPool, id: Uuid, updated_part: NewPart) -> Result<Part, AppError> {
+use super::auth::ensure_part_owner;
+
+pub async fn update_part(
+    claims: Claims,
+    pool: &PgPool,
+    id: Uuid,
+    updated_part: NewPart,
+) -> Result<Part, AppError> {
     updated_part
         .validate()
         .map_err(|e| AppError::ValidationError(extract_validation_errors(e)))?;
+
+    ensure_part_owner(claims, pool, id).await?;
 
     let part = sqlx::query_as!(
         Part,
@@ -21,7 +31,7 @@ pub async fn update_part(pool: &PgPool, id: Uuid, updated_part: NewPart) -> Resu
             kind = $4,
             updated_at = NOW()
         WHERE id = $5
-        RETURNING id, part_number, name, description, kind, created_at, updated_at
+        RETURNING id, part_number, name, description, kind, created_at, created_by, updated_at
         "#,
         updated_part.part_number,
         updated_part.name,

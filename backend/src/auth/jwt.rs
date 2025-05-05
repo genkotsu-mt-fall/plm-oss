@@ -11,7 +11,7 @@ use crate::errors::app_error::AppError;
 
 use super::domain::Claims;
 
-pub async fn jwt_auth(req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
+pub async fn jwt_auth(mut req: Request<Body>, next: Next) -> Result<Response, StatusCode> {
     let token = req
         .headers()
         .get(AUTHORIZATION)
@@ -28,7 +28,10 @@ pub async fn jwt_auth(req: Request<Body>, next: Next) -> Result<Response, Status
         &DecodingKey::from_secret(secret.as_bytes()),
         &validation,
     ) {
-        Ok(_token_data) => Ok(next.run(req).await),
+        Ok(token_data) => {
+            req.extensions_mut().insert(token_data.claims);
+            Ok(next.run(req).await)
+        }
         Err(err) => {
             error!("Invalid JWT: {}", err);
             Err(StatusCode::UNAUTHORIZED)

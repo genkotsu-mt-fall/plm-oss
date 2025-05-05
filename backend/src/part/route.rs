@@ -1,3 +1,4 @@
+use crate::auth::domain::Claims;
 use crate::errors::app_error::AppError;
 use crate::errors::validation::ValidationErrorResponse;
 use crate::part::domain::{NewPart, Part};
@@ -10,6 +11,7 @@ use crate::responses::error::ErrorResponse;
 use crate::responses::success::SuccessResponse;
 // use crate::services::part_service::PartService;
 
+use axum::Extension;
 use axum::{Json, extract::Path, extract::State};
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -22,10 +24,11 @@ use uuid::Uuid;
     (status = 500, description = "Database error", body = ErrorResponse),
 ), tags = ["parts"], security(("bearerAuth" = [])))]
 pub async fn create_part(
+    Extension(claims): Extension<Claims>,
     State(pool): State<PgPool>,
     Json(new_part): Json<NewPart>,
 ) -> Result<Json<SuccessResponse<Part>>, AppError> {
-    let part = service_create_part(&pool, new_part).await?;
+    let part = service_create_part(claims, &pool, new_part).await?;
     Ok(Json(SuccessResponse::created(part)))
 }
 
@@ -66,11 +69,12 @@ pub async fn get_part(
     (status = 500, description = "Database error", body = ErrorResponse),
 ), tags = ["parts"], security(("bearerAuth" = [])))]
 pub async fn update_part(
+    Extension(claims): Extension<Claims>,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
     Json(updated_part): Json<NewPart>,
 ) -> Result<Json<SuccessResponse<Part>>, AppError> {
-    let part = service_update_part(&pool, id, updated_part).await?;
+    let part = service_update_part(claims, &pool, id, updated_part).await?;
     Ok(Json(SuccessResponse::ok(part)))
 }
 
@@ -82,9 +86,10 @@ pub async fn update_part(
     (status = 500, description = "Database error", body = ErrorResponse),
 ), tags = ["parts"], security(("bearerAuth" = [])))]
 pub async fn delete_part(
+    Extension(claims): Extension<Claims>,
     State(pool): State<PgPool>,
     Path(id): Path<Uuid>,
 ) -> Result<Json<SuccessResponse<()>>, AppError> {
-    service_delete_part(&pool, id).await?;
+    service_delete_part(claims, &pool, id).await?;
     Ok(Json(SuccessResponse::no_content()))
 }

@@ -79,6 +79,29 @@ if [ "$update_code" != "400" ]; then
 fi
 echo "✅ Validation for update worked"
 
+echo "=== 🧪 Signing up as second user ==="
+signup_res2=$(curl -s -X POST "$API_URL/signup" \
+  -H "Content-Type: application/json" \
+  -d '{"login_name":"otheruser","password":"pass456"}')
+
+login_res2=$(curl -s -X POST "$API_URL/login" \
+  -H "Content-Type: application/json" \
+  -d '{"login_name":"otheruser","password":"pass456"}')
+
+token2=$(echo "$login_res2" | jq -r '.data.token')
+AUTH_HEADER2="Authorization: Bearer $token2"
+
+echo "=== 🧪 Trying to delete another user's part ==="
+unauth_delete=$(curl -s -X DELETE "$API_URL/parts/$part_id" \
+  -H "$AUTH_HEADER2")
+
+code=$(echo "$unauth_delete" | jq -r '.code')
+if [ "$code" != "401" ]; then
+  echo "❌ Unauthorized delete should fail, got: $code"
+  exit 1
+fi
+echo "✅ Unauthorized delete blocked"
+
 echo "=== 🧪 Deleting part ==="
 delete_res=$(curl -s -X DELETE "$API_URL/parts/$part_id" \
   -H "$AUTH_HEADER")
