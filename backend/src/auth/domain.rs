@@ -4,7 +4,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Claims {
     pub sub: String,
-    pub role: String,
+    pub role: Role,
     pub exp: usize,
 }
 
@@ -28,4 +28,21 @@ pub struct LoginRequest {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct LoginResponse {
     pub token: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub enum Role {
+    Admin,
+    User,
+    Unknown(String),
+}
+
+impl From<&str> for Role {
+    fn from(s: &str) -> Self {
+        match s {
+            "admin" => Role::Admin,
+            "user" => Role::User,
+            other => Role::Unknown(other.to_string()),
+        }
+    }
 }

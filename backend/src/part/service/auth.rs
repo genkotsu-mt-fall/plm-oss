@@ -2,7 +2,10 @@ use sqlx::PgPool;
 use tracing::error;
 use uuid::Uuid;
 
-use crate::{auth::domain::Claims, errors::app_error::AppError};
+use crate::{
+    auth::domain::{Claims, Role},
+    errors::app_error::AppError,
+};
 
 pub async fn ensure_part_owner(claims: Claims, pool: &PgPool, id: Uuid) -> Result<(), AppError> {
     let part_owner = sqlx::query_scalar!("SELECT created_by FROM parts WHERE ID = $1", id)
@@ -33,7 +36,7 @@ pub async fn ensure_admin_or_owner(
     pool: &PgPool,
     id: Uuid,
 ) -> Result<(), AppError> {
-    if claims.role == "admin" {
+    if claims.role == Role::Admin {
         Ok(())
     } else {
         ensure_part_owner(claims, pool, id).await
