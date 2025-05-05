@@ -16,10 +16,15 @@ pub async fn ensure_part_owner(claims: Claims, pool: &PgPool, id: Uuid) -> Resul
     let user_id = Uuid::parse_str(&claims.sub)
         .map_err(|e| AppError::InternalError(format!("Invalid UUID in claims: {}", e)))?;
 
-    if part_owner != Some(user_id) {
-        Err(AppError::Unauthorized("You do not own this part.".into()))
-    } else {
-        Ok(())
+    match part_owner {
+        Some(owner_id) => {
+            if owner_id != user_id {
+                Err(AppError::Unauthorized("You do not own this part.".into()))
+            } else {
+                Ok(())
+            }
+        }
+        None => Err(AppError::NotFound(format!("Part not found: {}", id))),
     }
 }
 

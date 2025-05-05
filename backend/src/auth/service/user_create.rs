@@ -18,9 +18,6 @@ pub async fn create_user_with_role(
         })?;
 
     if existing.is_some() {
-        // return Err(AppError::Conflict(
-        //     "This login name is already taken.".to_string(),
-        // ));
         info!("This login name is already exist.");
         return Ok(());
     }
