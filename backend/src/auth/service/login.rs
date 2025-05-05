@@ -1,6 +1,6 @@
 use crate::{
     auth::{
-        domain::{Claims, LoginRequest, LoginResponse},
+        domain::{Claims, LoginRequest, LoginResponse, Role},
         jwt::generate_jwt,
         password::verify_password,
     },
@@ -40,7 +40,7 @@ pub async fn login(pool: &PgPool, payload: LoginRequest) -> Result<LoginResponse
 
     let claims = Claims {
         sub: user.id.to_string(),
-        role: user.role.clone(),
+        role: Role::from(user.role.as_str()),
         exp: expiration,
     };
 
