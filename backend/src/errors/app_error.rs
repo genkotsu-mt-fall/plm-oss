@@ -10,7 +10,7 @@ use utoipa::ToSchema;
 pub enum AppError {
     ValidationError(ValidationErrorResponse),
     NotFound(String),
-    Conflict(String),
+    // Conflict(String),
     DatabaseError(String),
     InternalError(String),
     Unauthorized(String),
@@ -46,19 +46,19 @@ impl IntoResponse for AppError {
 
                 (status, body).into_response()
             }
-            AppError::Conflict(message) => {
-                let status = StatusCode::CONFLICT;
+            // AppError::Conflict(message) => {
+            //     let status = StatusCode::CONFLICT;
 
-                error!("Conflict ({}): {}", status, message);
+            //     error!("Conflict ({}): {}", status, message);
 
-                let body = Json(ErrorResponse {
-                    success: false,
-                    code: status.as_u16(),
-                    error: ErrorDetail { message },
-                });
+            //     let body = Json(ErrorResponse {
+            //         success: false,
+            //         code: status.as_u16(),
+            //         error: ErrorDetail { message },
+            //     });
 
-                (status, body).into_response()
-            }
+            //     (status, body).into_response()
+            // }
             AppError::DatabaseError(message) => {
                 let status = StatusCode::INTERNAL_SERVER_ERROR;
 
