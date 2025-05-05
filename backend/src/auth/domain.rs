@@ -4,6 +4,7 @@ use utoipa::ToSchema;
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Claims {
     pub sub: String,
+    pub role: String,
     pub exp: usize,
 }
 

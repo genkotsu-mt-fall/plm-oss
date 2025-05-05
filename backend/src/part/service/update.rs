@@ -8,7 +8,7 @@ use tracing::{error, info};
 use uuid::Uuid;
 use validator::Validate;
 
-use super::auth::ensure_part_owner;
+use super::auth::ensure_admin_or_owner;
 
 pub async fn update_part(
     claims: Claims,
@@ -20,7 +20,7 @@ pub async fn update_part(
         .validate()
         .map_err(|e| AppError::ValidationError(extract_validation_errors(e)))?;
 
-    ensure_part_owner(claims, pool, id).await?;
+    ensure_admin_or_owner(claims, pool, id).await?;
 
     let part = sqlx::query_as!(
         Part,

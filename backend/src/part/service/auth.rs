@@ -22,3 +22,15 @@ pub async fn ensure_part_owner(claims: Claims, pool: &PgPool, id: Uuid) -> Resul
         Ok(())
     }
 }
+
+pub async fn ensure_admin_or_owner(
+    claims: Claims,
+    pool: &PgPool,
+    id: Uuid,
+) -> Result<(), AppError> {
+    if claims.role == "admin" {
+        Ok(())
+    } else {
+        ensure_part_owner(claims, pool, id).await
+    }
+}

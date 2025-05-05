@@ -16,7 +16,7 @@ use crate::errors::app_error::AppError;
 pub async fn login(pool: &PgPool, payload: LoginRequest) -> Result<LoginResponse, AppError> {
     let user = sqlx::query_as!(
         User,
-        r#"SELECT id, login_name, password_hash, created_at
+        r#"SELECT id, login_name, password_hash, role, created_at
         FROM users
         WHERE login_name = $1"#,
         payload.login_name,
@@ -40,6 +40,7 @@ pub async fn login(pool: &PgPool, payload: LoginRequest) -> Result<LoginResponse
 
     let claims = Claims {
         sub: user.id.to_string(),
+        role: user.role.clone(),
         exp: expiration,
     };
 

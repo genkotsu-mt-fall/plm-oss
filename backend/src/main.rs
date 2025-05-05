@@ -6,6 +6,7 @@ mod responses;
 
 use auth::jwt::jwt_auth;
 use auth::route::{login, signup};
+use auth::service::user_create::create_user_with_role;
 use axum::http::HeaderValue;
 use axum::routing::post;
 use axum::{Router, http, middleware, routing::get};
@@ -56,6 +57,11 @@ async fn main() {
         error!("Failed to run database migrations: {}", err);
         panic!("Migration error");
     }
+
+    // resistor admin user
+    create_user_with_role(&pool, "admin", "admin", "admin")
+        .await
+        .expect("Failed to ensure default admin");
 
     let cors = CorsLayer::new()
         .allow_origin(
